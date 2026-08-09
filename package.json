@@ -1,0 +1,19 @@
+{
+  "name": "sovereign-tower-wiki",
+  "private": true,
+  "version": "0.9.3",
+  "type": "module",
+  "scripts": {
+    "data:story": "node ../scripts/Generate-WikiStoryData.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "inkjs": "^2.3.2",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest"
+  }
+}
