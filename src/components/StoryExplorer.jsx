@@ -113,7 +113,7 @@ function buildHistory(flow, selections) {
   return history;
 }
 
-function FlowDirectory({ flows, selectedId, filter, query, onFilter, onQuery, onSelect }) {
+function FlowDirectory({ flows, selectedId, filter, query, onFilter, onQuery, onSelect, onClose }) {
   const [page, setPage] = useState(1);
   const [expandedPerson, setExpandedPerson] = useState('');
   const filtered = useMemo(() => flows.filter((flow) => {
@@ -151,7 +151,7 @@ function FlowDirectory({ flows, selectedId, filter, query, onFilter, onQuery, on
   }, [flows, people, selectedId]);
 
   return <aside className="story-directory" onWheel={forwardWheel}>
-    <div className="story-directory-head"><span className="eyebrow">CHARACTER STORIES</span><h2>人物剧情</h2><p>{people.length} 个人物 · {filtered.length} 条对话</p></div>
+    <div className="story-directory-head"><button className="mobile-directory-close" onClick={onClose} aria-label="关闭筛选">×</button><span className="eyebrow">CHARACTER STORIES</span><h2>人物剧情</h2><p>{people.length} 个人物 · {filtered.length} 条对话</p></div>
     <label className="story-search"><span>⌕</span><input value={query} onChange={(event) => onQuery(event.target.value)} placeholder="搜索人物、对白、选项、结果或条件" /></label>
     <div className="story-kind-tabs">
       {[['audience', '觐见'], ['affinity', '好感'], ['conversation', '骑士会话'], ['all', '全部入口']].map(([value, label]) => <button className={filter === value ? 'active' : ''} key={value} onClick={() => onFilter(value)}>{label}</button>)}
@@ -163,7 +163,7 @@ function FlowDirectory({ flows, selectedId, filter, query, onFilter, onQuery, on
           <span><strong>{person.name}</strong><small>{person.flows.length} 条对话</small></span>
           <i>{expandedPerson === person.id ? '−' : '+'}</i>
         </button>
-        {expandedPerson === person.id && <div className="character-dialogues">{person.flows.map((flow) => <button className={`dialogue-row ${selectedId === flow.id ? 'active' : ''}`} key={flow.id} onClick={() => onSelect(flow.id)}>
+        {expandedPerson === person.id && <div className="character-dialogues">{person.flows.map((flow) => <button className={`dialogue-row ${selectedId === flow.id ? 'active' : ''}`} key={flow.id} onClick={() => { onSelect(flow.id); onClose(); }}>
           <span className={`entry-kind kind-${flow.kind}`}>{kindLabels[flow.kind] || '剧情'}</span>
           <strong title={flow.firstLine}>{truncate(flow.firstLine, 30)}</strong>
           <small>{flow.groups.length ? `${flow.groups.reduce((sum, group) => sum + group.choices.length, 0)} 条可选分支` : `${flow.staticLines.length} 条文本`}</small>
@@ -237,6 +237,7 @@ export default function StoryExplorer({ storyGraph }) {
   const [selections, setSelections] = useState({});
   const [relationsOpen, setRelationsOpen] = useState(false);
   const [historyMode, setHistoryMode] = useState('full');
+  const [directoryOpen, setDirectoryOpen] = useState(false);
   const selected = flows.find((flow) => flow.id === selectedId) || defaultFlow;
 
   useEffect(() => { setSelections({}); setRelationsOpen(false); }, [selectedId]);
@@ -244,8 +245,10 @@ export default function StoryExplorer({ storyGraph }) {
 
   return <div className="story-explorer-page">
     <div className="story-statusbar"><div><span className="eyebrow">THE LIVING ARCHIVE</span><b>完整剧情流</b></div><div className="story-stats"><span><strong>{storyGraph.stats.executableFlows}</strong> 条可执行剧情流</span><span><strong>{storyGraph.stats.recordedGroups}</strong> 组选项</span><span><strong>{storyGraph.stats.recordedBranches}</strong> 条分支</span></div><div className="evidence-legend"><span className="runtime-dot" />实机验证 <span className="static-dot" />静态执行</div></div>
-    <div className={`story-workspace history-${historyMode}`}>
-      <FlowDirectory flows={flows} selectedId={selectedId} filter={filter} query={query} onFilter={setFilter} onQuery={setQuery} onSelect={setSelectedId} />
+    <div className={`story-workspace history-${historyMode} ${directoryOpen ? 'directory-open' : ''}`}>
+      <button className="mobile-filter-toggle" onClick={() => setDirectoryOpen((value) => !value)} aria-expanded={directoryOpen}>筛选</button>
+      <FlowDirectory flows={flows} selectedId={selectedId} filter={filter} query={query} onFilter={setFilter} onQuery={setQuery} onSelect={setSelectedId} onClose={() => setDirectoryOpen(false)} />
+      {directoryOpen && <button className="directory-backdrop" onClick={() => setDirectoryOpen(false)} aria-label="关闭筛选" />}
       <section className="graph-pane"><div className="graph-toolbar"><div><b>剧情关系图</b><span>每个节点代表一条完整对话流，点击 + 展开关联任务</span></div><div className="graph-legend"><span>人物 = 对话流</span><span>卷轴 = 任务</span></div></div><FlowCanvas flow={selected} relationsOpen={relationsOpen} onToggleRelations={() => setRelationsOpen((value) => !value)} /></section>
       {historyMode !== 'hidden' && <HistoryPanel flow={selected} selections={selections} characters={storyGraph.characters} mode={historyMode} onChoice={selectChoice} onModeChange={setHistoryMode} />}
       {historyMode === 'hidden' && <button className="history-restore" onClick={() => setHistoryMode('full')}>展开对话</button>}
